@@ -345,8 +345,8 @@ class Level1 extends Phaser.Scene {
 
         //make strawberry hitbox smaller
         this.strawberry.body.setSize(
-            this.strawberry.width * 0.55,
-            this.strawberry.height * 0.55,
+            this.strawberry.width * 0.50,
+            this.strawberry.height * 0.51,
             true
         );
 
@@ -611,6 +611,423 @@ class Level1 extends Phaser.Scene {
     }
 }
 
+class Level2 extends Phaser.Scene {
+    constructor() {
+        super("level2");
+    }
+
+    preload() {
+        this.load.image("background", "assets/images/background.png");
+        this.load.image("strawberry", "assets/images/strawberry.png");
+        this.load.image("cherries", "assets/images/cherries.png");
+        this.load.image("basket", "assets/images/basket.png");
+    }
+
+    create(data) {
+        let bg = this.add.image(0, 0, "background").setOrigin(0);
+        bg.displayWidth = this.sys.game.config.width;
+        bg.displayHeight = this.sys.game.config.height;
+
+        let centerX = this.sys.game.config.width / 2;
+        let centerY = this.sys.game.config.height / 2;
+
+        this.scored = false;
+
+        this.isResetting = false;
+        this.stillTime = 0;
+        this.requiredStillTime = 600;
+        
+
+        this.stats = data.stats || {
+            shots: 0,
+            hits: 0,
+            startTime: Date.now()
+        };
+
+        // instructions
+        this.box = this.add.rectangle(
+            centerX,
+            centerY + 220,
+            400,
+            110,
+            0xf8c9d4,
+            0.9
+        ).setOrigin(0.5);
+
+        this.instructions = this.add.text(
+            centerX,
+            centerY + 220,
+            "Get all fruits into the basket.\nEach fruit has 3 attempts.",
+            {
+                fontFamily: "Kalam",
+                fontSize: "25px",
+                color: "#000000",
+                align: "center",
+                backgroundColor: "#FEF6F8",
+                padding: { x: 20, y: 20 }
+            }
+        ).setOrigin(0.5);
+
+        this.time.delayedCall(5000, () => {
+            this.tweens.add({
+                targets: [this.instructions, this.box],
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => {
+                    this.instructions.destroy();
+                    this.box.destroy();
+                }
+            });
+        });
+
+        this.launchX = centerX - 410;
+        this.launchY = centerY + 25;
+
+        this.launched = false;
+
+        this.levelText = this.add.text(
+            centerX - 550,
+            centerY - 315,
+            "Level 2",
+            {
+                fontFamily: "Kalam",
+                fontSize: "35px",
+                color: "#000000"
+            }
+        );
+
+        this.attemptText = this.add.text(
+            centerX + 435,
+            centerY - 315,
+            "",
+            {
+                fontFamily: "Kalam",
+                fontSize: "28px",
+                color: "#000000"
+            }
+        );
+
+        // platform1 --> fruit starting platform
+        this.platform1 = this.add.rectangle(
+            centerX - 420,
+            centerY + 120,
+            240,
+            50,
+            0x4b372c
+        );
+
+        this.physics.add.existing(this.platform1, true);
+
+        //platform2 --> platform for fruit to bounce off of
+        this.platform2 = this.add.rectangle(
+            centerX,
+            centerY + 20,
+            180,
+            30,
+            0x4b372c
+        );
+        this.physics.add.existing(this.platform2, true);
+
+        // basket
+        this.basket = this.physics.add.sprite(
+            centerX + 485,
+            centerY + 60,
+            "basket"
+        );
+
+        this.basket.setScale(0.14);
+
+        this.basket.body.setSize(
+            this.basket.width * 0.50,
+            this.basket.height * 0.1,
+            true
+        );
+
+        this.basket.body.setAllowGravity(false);
+
+        // fruit order
+        this.fruitOrder = ["strawberry", "cherries"];
+        this.currentFruitIndex = 0;
+        this.attempts = 3;
+
+        this.aimArrow = this.add.graphics();
+
+        this.spawnFruit();
+
+        //dragging mechanics
+        this.input.on("drag", (pointer, obj, dragX, dragY) => {
+            if (obj !== this.currentFruit) return;
+            if (this.launched) return;
+
+            let maxDistance = 140;
+
+            let dx = dragX - this.launchX;
+            let dy = dragY - this.launchY;
+
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > maxDistance) {
+                let angle = Math.atan2(dy, dx);
+
+                dragX = this.launchX + Math.cos(angle) * maxDistance;
+                dragY = this.launchY + Math.sin(angle) * maxDistance;
+            }
+
+            if (dragY > this.launchY + 40) { //og 40
+                dragY = this.launchY + 40;
+            }
+
+            obj.x = dragX;
+            obj.y = dragY;
+
+            this.aimArrow.clear();
+
+            let arrowdx = this.launchX - obj.x;
+            let arrowdy = this.launchY - obj.y;
+
+            let length = Math.sqrt(
+                arrowdx * arrowdx + arrowdy * arrowdy
+            );
+
+            let dirX = arrowdx / length;
+            let dirY = arrowdy / length;
+
+            let offset = 35;
+
+            let startX = this.launchX + dirX * offset;
+            let startY = this.launchY + dirY * offset;
+
+            let arrowLength = Math.min(length * 1.4, 170);
+
+            let endX = startX + dirX * arrowLength;
+            let endY = startY + dirY * arrowLength;
+
+            this.aimArrow.lineStyle(6, 0xffffff, 1);
+            this.aimArrow.beginPath();
+            this.aimArrow.moveTo(startX, startY);
+            this.aimArrow.lineTo(endX, endY);
+            this.aimArrow.strokePath();
+
+            let angle = Phaser.Math.Angle.Between(
+                startX,
+                startY,
+                endX,
+                endY
+            );
+
+            let size = 18;
+            let tipOffset = 20;
+
+            let tipX = endX + dirX * tipOffset;
+            let tipY = endY + dirY * tipOffset;
+
+            this.aimArrow.fillStyle(0xffffff, 1);
+
+            this.aimArrow.fillTriangle(
+                tipX,
+                tipY,
+                tipX - Math.cos(angle - 0.5) * size,
+                tipY - Math.sin(angle - 0.5) * size,
+                tipX - Math.cos(angle + 0.5) * size,
+                tipY - Math.sin(angle + 0.5) * size
+            );
+        });
+
+        //release to launch mechanics
+        this.input.on("dragend", (pointer, obj) => {
+            console.log("dragend fired", obj === this.currentFruit, this.launched);
+            if (obj !== this.currentFruit) return;
+            if (this.launched) return;
+
+            this.launched = true;
+            this.stats.shots++;
+
+            this.aimArrow.clear();
+
+            let dx = this.launchX - obj.x;
+            let dy = this.launchY - obj.y;
+
+            let power = 8;
+
+            obj.body.setAllowGravity(true);
+            obj.setBounce(0.3); //og 0.3
+            obj.setDamping(true);
+            obj.setDrag(0.7);
+            obj.setFriction(1);
+
+            obj.setVelocity(dx * power, dy * power);
+
+            obj.disableInteractive();
+        });
+    }
+    //With more fruits, move physics to apply to all the fruits
+    spawnFruit() {
+        let fruitName = this.fruitOrder[this.currentFruitIndex];
+
+        this.currentFruit = this.physics.add.sprite(
+            this.launchX,
+            this.launchY,
+            fruitName
+        );
+
+        this.currentFruit
+            .setScale(0.1)
+            .setBounce(0.5)
+            .setCollideWorldBounds(true);
+
+        this.currentFruit.body.setAllowGravity(false);
+
+        this.currentFruit.body.setSize(
+            this.currentFruit.width * 0.55,
+            this.currentFruit.height * 0.55,
+            true
+        );
+
+        this.physics.add.collider(
+            this.currentFruit,
+            this.platform1
+        );
+
+        this.physics.add.collider(
+            this.currentFruit,
+            this.platform2,
+
+            //when the fruit lands on the platform there is a bounce so that it can reach the basket
+            () => {
+                let platformLeft = this.platform2.x - this.platform2.width / 2;
+                let platformRight = this.platform2.x + this.platform2.width / 2;
+                let fruitX = this.currentFruit.x;
+                let fruitY = this.currentFruit.y;
+
+                if (fruitX >= platformLeft && fruitX <= platformRight && fruitY < this.platform2.y) {
+                    this.currentFruit.setVelocityY(-400);
+                }
+            }
+        );
+        
+
+        this.physics.add.overlap(
+            this.currentFruit,
+            this.basket,
+            this.scoreFruit,
+            null,
+            this
+        );
+
+        this.currentFruit.setInteractive();
+        this.input.setDraggable(this.currentFruit);
+
+        this.launched = false;
+
+        this.attemptText.setText(
+            "Attempts: " + this.attempts
+        );
+    }
+
+    scoreFruit(fruit, basket) {
+        if (this.scored) return; //can't score twice accidently
+        this.scored = true;
+
+        this.stats.hits++;
+
+        fruit.setVelocity(0, 0);
+        fruit.body.setAllowGravity(false);
+        fruit.body.moves = false;
+
+        this.tweens.add({
+            targets: fruit,
+            x: basket.x,
+            y: basket.y - 10,
+            duration: 150,
+            ease: "Power2"
+        });
+
+        fruit.disableInteractive();
+
+        this.time.delayedCall(700, () => {
+            fruit.destroy();
+
+            this.currentFruitIndex++; //move onto next fruit
+
+            if (this.currentFruitIndex < this.fruitOrder.length) {
+                this.attempts = 3;
+                this.scored = false;   // reset score for next fruit
+                this.spawnFruit();
+            }
+            else {
+                this.scene.start("levelSummary", {
+                    level: 2,
+                    stats: this.stats
+                });
+            }
+        });
+    }
+
+    resetFruit() {
+        if (this.isResetting) return;
+
+        this.isResetting = true;
+
+        this.attempts--;
+
+        this.attemptText.setText(
+            "Attempts: " + this.attempts
+        );
+
+        if (this.attempts <= 0) {
+            this.scene.start("restart", {
+                level: 2
+            });
+            return;
+        }
+
+        this.currentFruit.setPosition(
+            this.launchX,
+            this.launchY
+        );
+
+        this.currentFruit.setVelocity(0, 0);
+        this.currentFruit.body.setAllowGravity(false);
+        this.currentFruit.setBounce(0);
+
+        this.currentFruit.setInteractive();
+        this.input.setDraggable(this.currentFruit);
+
+        this.launched = false;
+
+        this.time.delayedCall(100, () => {
+            this.isResetting = false;
+        });
+    }
+
+    update() {
+        if (!this.launched || this.isResetting) return;
+        if (!this.currentFruit || !this.currentFruit.body) return;
+
+        let body = this.currentFruit.body;
+
+        if (this.currentFruit.y > 700 || this.currentFruit.x < -100 || this.currentFruit.x > 1300) {
+            this.resetFruit();
+            return;
+        }
+
+        if (this.physics.overlap(this.currentFruit, this.basket)) {
+            return;
+        }
+
+        if (body.velocity.length() < 10) {
+            this.stillTime += this.game.loop.delta;
+
+            if (this.stillTime > this.requiredStillTime) {
+                this.resetFruit();
+            }
+        }
+        else {
+            this.stillTime = 0;
+        }
+    }
+}
+
 class LevelSummary extends Phaser.Scene {
     constructor() {
         super('levelSummary')
@@ -866,7 +1283,7 @@ const game = new Phaser.Game({
             gravity: { y : 300}
         },
     },
-    scene: [Intro, Instructions, Level1, LevelSummary, Restart],
-    //scene: [LevelSummary],
+    scene: [Intro, Instructions, Level1, Level2, LevelSummary, Restart],
+    //scene: [Level2, LevelSummary],
     title: "Fruit Blast",
 });
