@@ -219,6 +219,8 @@ class Level1 extends Phaser.Scene {
         this.load.image("background", "assets/images/background.png");
         this.load.image("strawberry", "assets/images/strawberry.png");
         this.load.image("basket", "assets/images/basket.png");
+
+        this.load.audio("pop", "assets/sounds/pop.mp3");
     }
     create(data) {
         let bg = this.add.image(0, 0, "background").setOrigin(0);
@@ -269,7 +271,7 @@ class Level1 extends Phaser.Scene {
             }
         ).setOrigin(0.5);
 
-        this.time.delayedCall(5000, () => {
+        this.time.delayedCall(2000, () => {
             this.tweens.add({
                 targets: [this.instructions, this.box],
                 alpha: 0,
@@ -532,6 +534,7 @@ class Level1 extends Phaser.Scene {
         this.scored = true;
 
         this.stats.hits++;
+        this.sound.play('pop');
 
         //stop movement when strawberry and basked collide
         strawberry.setVelocity(0, 0);
@@ -638,6 +641,8 @@ class Level2 extends Phaser.Scene {
         this.load.image("strawberry", "assets/images/strawberry.png");
         this.load.image("cherries", "assets/images/cherries.png");
         this.load.image("basket", "assets/images/basket.png");
+
+        this.load.audio("pop", "assets/sounds/pop.mp3");
     }
 
     create(data) {
@@ -685,7 +690,7 @@ class Level2 extends Phaser.Scene {
             }
         ).setOrigin(0.5);
 
-        this.time.delayedCall(5000, () => {
+        this.time.delayedCall(2000, () => {
             this.tweens.add({
                 targets: [this.instructions, this.box],
                 alpha: 0,
@@ -983,6 +988,7 @@ class Level2 extends Phaser.Scene {
         this.scored = true;
 
         this.stats.hits++;
+        this.sound.play('pop');
 
         fruit.setVelocity(0, 0);
         fruit.body.setAllowGravity(false);
@@ -1093,6 +1099,8 @@ class Level3 extends Phaser.Scene {
         this.load.image("cherries", "assets/images/cherries.png");
         this.load.image("peach", "assets/images/peach.png");
         this.load.image("basket", "assets/images/basket.png");
+
+        this.load.audio("pop", "assets/sounds/pop.mp3");
     }
 
     create(data) {
@@ -1145,7 +1153,7 @@ class Level3 extends Phaser.Scene {
             }
         ).setOrigin(0.5);
 
-        this.time.delayedCall(5000, () => {
+        this.time.delayedCall(2000, () => {
             this.tweens.add({
                 targets: [this.instructions, this.box],
                 alpha: 0,
@@ -1423,6 +1431,7 @@ class Level3 extends Phaser.Scene {
         this.scored = true;
 
         this.stats.hits++;
+        this.sound.play('pop');
 
         fruit.setVelocity(0, 0);
         fruit.body.setAllowGravity(false);
@@ -1575,7 +1584,7 @@ class LevelSummary extends Phaser.Scene {
 
         let buttonRect = this.add.rectangle(centerX, centerY + 180, rectWidth * 0.21, 70, 0xe7839a).setOrigin(0.5);
 
-        let nextButton = this.add.text(centerX, centerY + 180, "next level", {
+        let nextButton = this.add.text(centerX, centerY + 180, level == 3 ? "complete!" : "next level", {
             fontFamily: "Kalam",
             fontSize: "28px",
             fill: "#000000",
@@ -1640,7 +1649,6 @@ class LevelSummary extends Phaser.Scene {
                 });
             }
             else {
-                nextButton.setText("complete!")
                 this.scene.start("outro");
             }
         });
