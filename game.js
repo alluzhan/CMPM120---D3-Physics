@@ -1899,20 +1899,22 @@ class Outro extends Phaser.Scene {
     }
 }
 
-const game = new Phaser.Game({
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1200,
-        height: 675,
-    },
-    physics: {
-        default: "arcade",
-        arcade: {
-            //debug: true,
-            gravity: { y : 300}
+document.fonts.load('700 40px Kalam').then(() => {
+    const game = new Phaser.Game({
+        scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+            width: 1200,
+            height: 675,
         },
-    },
-    scene: [Intro, Instructions, Level1, Level2, Level3, Outro, LevelSummary, Restart],
-    title: "Fruit Blast",
+        physics: {
+            default: "arcade",
+            arcade: {
+                //debug: true,
+                gravity: { y : 300}
+            },
+        },
+        scene: [Intro, Instructions, Level1, Level2, Level3, Outro, LevelSummary, Restart],
+        title: "Fruit Blast",
+    });
 });
