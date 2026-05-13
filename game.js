@@ -199,15 +199,17 @@ class Instructions extends Phaser.Scene {
         });
 
         button.on("pointerdown", () => {
-            this.scene.start("level1", {
-                stats: {
-                    shots: 0,
-                    hits: 0,
-                    startTime: Date.now()
-                }
+            this.cameras.main.fadeOut(200, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start("level1", {
+                    stats: {
+                        shots: 0,
+                        hits: 0,
+                        startTime: Date.now()
+                    }
+                });
+             });
             });
-        });
-
     }
 }
 
@@ -223,6 +225,8 @@ class Level1 extends Phaser.Scene {
         this.load.audio("pop", "assets/sounds/pop.mp3");
     }
     create(data) {
+        this.cameras.main.fadeIn(500, 0, 0, 0);
+        
         let bg = this.add.image(0, 0, "background").setOrigin(0);
         bg.displayWidth = this.sys.game.config.width;
         bg.displayHeight = this.sys.game.config.height;
@@ -597,6 +601,8 @@ class Level1 extends Phaser.Scene {
         this.time.delayedCall(100, () => {
             this.isResetting = false;
         });
+
+        this.stillTime = 0;
     }
     update() {
         if (!this.launched || this.isResetting) return;
@@ -618,15 +624,14 @@ class Level1 extends Phaser.Scene {
             return;
         }
 
-        //checks if the fruit stopped moving for a certain amount of time to trigger reset (in case it gets stuck somewhere)
-        if (body.velocity.length() < 10) {
+        //checks if the fruit stopped moving for a certain amount of time to trigger reset (in case it gets stuck somewhere) + if it lands on the starting platform (removes jittering)
+        if (body.velocity.length() < 30) {
             this.stillTime += this.game.loop.delta;
-
             if (this.stillTime > this.requiredStillTime) {
                 this.resetFruit();
             }
         } else {
-            this.stillTime = 0; // reset timer if it moves again
+            this.stillTime = 0;
         }
     }
 }
@@ -1058,6 +1063,8 @@ class Level2 extends Phaser.Scene {
         this.time.delayedCall(100, () => {
             this.isResetting = false;
         });
+
+        this.stillTime = 0;
     }
 
     update() {
@@ -1075,14 +1082,12 @@ class Level2 extends Phaser.Scene {
             return;
         }
 
-        if (body.velocity.length() < 10) {
+        if (body.velocity.length() < 30) {
             this.stillTime += this.game.loop.delta;
-
             if (this.stillTime > this.requiredStillTime) {
                 this.resetFruit();
             }
-        }
-        else {
+        } else {
             this.stillTime = 0;
         }
     }
@@ -1495,6 +1500,8 @@ class Level3 extends Phaser.Scene {
         this.time.delayedCall(100, () => {
             this.isResetting = false;
         });
+
+        this.stillTime = 0;
     }
 
     update() {
@@ -1531,17 +1538,14 @@ class Level3 extends Phaser.Scene {
             return;
         }
 
-        if (body.velocity.length() < 10) {
+        if (body.velocity.length() < 30) {
             this.stillTime += this.game.loop.delta;
-
             if (this.stillTime > this.requiredStillTime) {
                 this.resetFruit();
             }
-        }
-        else {
+        } else {
             this.stillTime = 0;
         }
-
     }
 }
 
